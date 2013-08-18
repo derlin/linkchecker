@@ -4,6 +4,7 @@ $(function(){
     $("#waiting").hide();
     
     $('#clear-container button').button().click( function(){ console.log("clear"); $("#results").html('') } );
+
     $('#url_textfield').keypress( function( event ) {
         
         if ( event.which != 13 || loading ) return;

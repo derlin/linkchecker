@@ -14,7 +14,7 @@ class LinkCheckerWebApp( object ):
     @cherrypy.expose
     def ajax_query( self, url ):
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        output = '';
+        output = ''
 
         if url:
             try:
