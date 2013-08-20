@@ -47,8 +47,14 @@ class LinkChecker( ):
         return self.__links
 
 
-    def check_async(self, print_function = None, print_queue= None, recursive_depth = 2):
-        Thread(target=self.check, args=(print_function, print_queue, recursive_depth)).start()
+    def check_async( self, print_function = None, print_queue= None, recursive_depth = 2,
+            callback=None ):
+
+        def launch():
+            self.check(print_function, print_queue, recursive_depth)
+            if callback is not None: callback()
+
+        Thread(target=launch).start()
 
     def stop_checking(self):
         self.checking = False

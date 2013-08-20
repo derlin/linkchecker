@@ -7,6 +7,8 @@
         <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
         <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
         <link type="text/css" rel="stylesheet" href="http://code.jquery.com/ui/1.9.1/themes/smoothness/jquery-ui.css"  />
+        <script type="text/javascript" src="/socket_handler.js"></script>
+        <script type="text/javascript" src="/scrollTo.js"></script>
         <script type="text/javascript" src="/index.js"></script>
     </head>
 
@@ -19,17 +21,22 @@
             <div id="input-container">
                 <label for="url_textfield">Enter an absolute url : </label>
                 
-                <form onsubmit="return false;"><input type="text" id="url_textfield" class="ui-corner-all" /></form>
+                <form onsubmit="return false;">
+                    <input type="text" id="url_textfield" class="ui-corner-all" />
+                </form>
                 
                 <div id="validation" class="ui-state-error ui-corner-all" style="padding: 0 .2em;">
                     <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;">
                     </span>This url is invalid</p>
                 </div>
             </div>
-            
-            <div id="clear-container"><button>Clear results</button></div>
 
-            <iframe name="console"></iframe>
+
+            <div id="clear-container">
+                <button id="clear-button">Clear results</button>
+                <button id="show-console-button">Show console</button>
+            </div>
+
 
             <div id="results-container" class="ui-widget-content ui-corner-all">
                 
@@ -45,8 +52,10 @@
                 <div id="results"></div>
                 
             </div> 
-                
 
+            <div id="checking_dialog" class="dialog" title="Current Task Terminal">
+                <div class="inner"></div>
+            </div>
         </div> <!-- end body container-->
     </body>
 

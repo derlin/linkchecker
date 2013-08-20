@@ -5,12 +5,15 @@ from resources.linkchecker import *
 parser = LinkChecker()
 #parser.feedwith("http://perrin-traiteur.ch")
 
+def fun():
+    print "finish"
 
 links = parser.feedwith( "http://docs.python-requests.org/" )#"http://perrin-traiteur.ch")
 print "found ", len( links ), " links"
-parser.check_async()
-time.sleep(3)
-parser.stop_checking()
+parser.check_async(recursive_depth=0,callback=fun)
+
+"""
+
 print "added ", parser.count, " links to queue"
 print "visited links ", len( parser.visited_links ), " links "
 
@@ -26,3 +29,4 @@ print "added ", parser.count, " links to queue"
 print "visited links ", len( parser.visited_links ), " links "
 print len(parser.brokenlinks)
 
+"""

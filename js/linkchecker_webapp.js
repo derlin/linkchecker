@@ -1,15 +1,91 @@
 var loading = false;
 var current_url = null;
-$(function(){
-    $("#waiting").hide();
-    
-    $('#clear-container button').button().click( function(){ console.log("clear"); $("#results").html('') } );
+var checking_dialog = null;
+var checking_dialog_inner = null;
 
+var MessageTypes = {
+    // responses from the server
+    IN_CHECKING_STREAM: "checking_stream",
+    IN_BROKEN_LINKS: "broken_links",
+    IN_CHECKING_CANCELED: "checking_canceled",
+
+    // requests from the client
+    OUT_CHECK: "check",
+    OUT_CANCEL_CHECK: "cancel_check"
+};
+
+
+/* *****************************************************************
+ * on load
+ * ****************************************************************/
+
+ $( function(){
+
+    // ----------- websocket handling -------------
+    var server = new SimpleSocketHandler('ws://localhost:14000/ws');
+    server.bind( MessageTypes.IN_CHECKING_STREAM, function( data ){
+        $( checking_dialog_inner ).append( data );
+        $( checking_dialog ).scrollTo( 'max' );
+    });
+
+    server.bind( MessageTypes.IN_BROKEN_LINKS, function( result ){
+        loading = false;
+        $("#waiting").hide();
+        $( checking_dialog_inner ).append(
+            $("<br /><div><strong>Finished !</strong> Found " + result.length + " suspicious links...</div>")
+        );
+        $( checking_dialog ).scrollTo( 'max' );
+        console.log( result );
+        handle_result( result );
+    });
+
+    server.bind( MessageTypes.IN_CHECKING_CANCELED, function( data ){
+        console.log( data );
+        loading = false;
+        $( "#waiting" ).hide();
+    });
+
+    //--------------- init interface -----------------------
+    // hides the waiting anim
+    $("#waiting").hide();
+
+    // inits the terminal dialog
+    checking_dialog = $("#checking_dialog" );
+     $( checking_dialog ).dialog({
+        autoOpen: false,
+        modal: true,
+        height: ( $ (window ).height() * 0.6 ),
+        width:  ( $( window ).width() * 0.8 ),
+        buttons: {
+            "Stop task": function(){
+                server.send( MessageTypes.OUT_CANCEL_CHECK, "" );
+
+            },
+            "Clear": function(){ $( this ).find( ".inner" ).html("") },
+            "Close" : function(){
+                $( this ).dialog('close');
+            }
+        }
+    });
+    checking_dialog_inner = $( checking_dialog ).find(".inner");
+
+    // init clear and show console buttons
+    $( "#clear-container button" ).button();
+
+    $('#clear-button').click( function(){
+        console.log("clear");
+        $("#results").html('')
+    });
+    $('#show-console-button').click( function(){
+        open_checking_dialog()
+    });
+
+    // handles the input field
     $('#url_textfield').keypress( function( event ) {
         
         if ( event.which != 13 || loading ) return;
           
-        if( is_url_valid( $(this).val() )){
+        if( is_url_valid( $( this ).val() )){
             
             console.log( "url valid" );
             $( "#validation" ).hide();
@@ -17,28 +93,28 @@ $(function(){
             
             loading = true;
             current_url = $( this ).val();
-            console.log("ajax");
-             
-            $.ajax({
-                type: "POST",
-                url : "/ajax_query",
-                data: { url : current_url },
-                success : function( result ){
-                    loading = false;
-                    $("#waiting").hide();
-                    console.log( result );
-                    handle_result( result );
-                    //$("#results").html( result );
-                }
-            });
-         
+
+            server.send( MessageTypes.OUT_CHECK, current_url );
+
+            // opens the dialog
+            open_checking_dialog();
+
         }else{
             $( "#validation" ).css('display', 'inline-block');
         }
-
     });
 });
 
+
+/* *****************************************************************
+ * functions
+ * ****************************************************************/
+
+ function open_checking_dialog(){
+    if( !$( checking_dialog ).dialog( 'isOpen' ) ){
+        $( checking_dialog ).dialog( 'open' );
+    }
+}
 function handle_result( data ){
     
     $('#results').append( $('<div class="intro">We found <strong>' + data.length + '</strong> suspicious link ' + ( data.length > 1 ? 's' : '' ) + 
@@ -63,33 +139,7 @@ function handle_result( data ){
 }
 
 function show_details( i ){
-    $('.dialog[index=' + i + ']').dialog({ width: 400 });
-}
-
-function handle_result_table( data ){
-    console.log( data.length );
-    
-    table = $('<table></table>');
-    var excluded = ['code', 'src', 'href'];
-    for( var i = 0; i < data.length; i++ ){
-        $(table).append( $('<tr><td>url</td><td>' + data[i]['url'] + '</td></tr>') );
-        $(table).append( $('<tr class="code"><td>code</td><td>' + data[i]['code'] + '</td></tr>') );
-        $(table).append( $('<tr><td>line(s)</td><td>' + data[i]['lineno'] + '</td></tr>') );
-        var hidden = $('<tr class="hidden"><td>' + key + '</td><td>' + data[i]['attrs'][key] + '</td></tr>');
-        for( var key in data[i]['attrs'] ){
-            $(hidden).append( $('<div><span class="key">' + key + '</span><span class="value">' + data[i]['attrs'][key] + '</span></div>') );
-        }
-        $(table).append( hidden );
-    }
-    
-    $('#results').html(table);
-    
-}
-
-
-function waiting(){
-    console.log("waiting");
-    $("#waiting").text( $("#waiting").text() + "." );
+    $('.dialog[index=' + i + ']').dialog( { width: 400 } );
 }
 
 function is_url_valid( url ){
