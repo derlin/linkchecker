@@ -2,11 +2,13 @@
 <html>
     <head>
         <title>LinkChecker</title>
-        <link type="text/css" rel="stylesheet" href="/index.css"  />
-        <link type="text/css" rel="stylesheet" href="/round_loading_animated.css"  />
         <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
         <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+        <!--<link type="text/css" rel="stylesheet"-->
+              <!--href="http://code.jquery.com/ui/1.9.1/themes/excite-bike/jquery-ui.css"  />-->
         <link type="text/css" rel="stylesheet" href="http://code.jquery.com/ui/1.9.1/themes/smoothness/jquery-ui.css"  />
+        <link type="text/css" rel="stylesheet" href="/index.css"  />
+        <link type="text/css" rel="stylesheet" href="/round_loading_animated.css"  />
         <script type="text/javascript" src="/socket_handler.js"></script>
         <script type="text/javascript" src="/scrollTo.js"></script>
         <script type="text/javascript" src="/index.js"></script>
@@ -24,15 +26,25 @@
                 <form onsubmit="return false;">
                     <input type="text" id="url_textfield" class="ui-corner-all" />
                 </form>
-                
+
                 <div id="validation" class="ui-state-error ui-corner-all" style="padding: 0 .2em;">
                     <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;">
                     </span>This url is invalid</p>
                 </div>
+
+                <div>
+                    <label for="rec_select">Recursion Depth:</label>
+                    <select id="rec_select" class="ui-corner-all ui-state-default">
+                        <option>0</option>
+                        <option>1</option>
+                        <option>2</option>
+                    </select>
+                </div>
+
             </div>
 
 
-            <div id="clear-container">
+            <div id="buttons-container">
                 <button id="clear-button">Clear results</button>
                 <button id="show-console-button">Show console</button>
             </div>

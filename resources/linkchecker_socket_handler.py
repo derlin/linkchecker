@@ -13,14 +13,21 @@ class LinkCheckerSocketHandler( WebSocket ):
 
 
     ## ------------- handle requests --------------------
-    def check( self, url, recursive_depth=0 ):
+    def check( self, data ):
+        data = json.loads( str( data ) )
+        print data
         if self.checker is None:
             print "no checker..."
             return
 
-        nbr_links = len( self.checker.feedwith( url ) )
+        if self.checker.checking:
+            print "already checking"
+            self.send_msg( "already_checking" )
+            return
+
+        nbr_links = len( self.checker.feedwith( data["url"] ) )
         self.checking_output_handler( "Found %d links... <br />Starting checking<br />" % (nbr_links,) )
-        self.checker.check_async( recursive_depth=recursive_depth,
+        self.checker.check_async( recursive_depth = data["rec_depth"],
             print_function = self.checking_output_handler,
             callback=self.send_broken_links )
         print "launched checking..."

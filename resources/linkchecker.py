@@ -96,7 +96,6 @@ class LinkChecker( ):
 
         self.__links = None # frees some memory
 
-        # self._jobq.join()
         while self.__jobq.qsize( ) > 0:
             time.sleep(1)       # block until all tasks are done
 
@@ -108,6 +107,10 @@ class LinkChecker( ):
 
 
     def __worker( self ):
+        """ The run method for the workers. Takes jobs from the links queue, checks the links
+            and puts the broken links into the result queue...
+            The workers will be blocked by the multiprocessing queue when the latter is empty.
+         """
         while True:
             item = self.__jobq.get( )
             #self.print_out(" qsize : %d %s" % (self.__jobq.qsize(), item))
@@ -120,28 +123,48 @@ class LinkChecker( ):
 
 
     def __is_visited( self, url ):
+        """
+            returns true if the url has already been visited, false otherwise.
+            This method is thread-safe
+        """
         self.link_lock.acquire( )
         val = url in self.visited_links
         self.link_lock.release( )
         return val
 
     def __add_visited( self, url ):
+        """
+            adds an url to the visited links list.
+            This method is thread-safe.
+        """
         self.link_lock.acquire( )
         self.visited_links.append( url )
         self.link_lock.release( )
 
 
     def __parse_link( self, l ):
-        self.print_out("   ** %d ** " % ( self.__jobq.qsize( ), ) )
+        """
+            The actual job done by the workers:
+             - resolves the url if it is not an absolute one
+             - verifies that the url has not been already visited
+             - if the recursive depth is greated than 0 and the url is from the same
+               domain as the "base url", parses the page and adds the links found to the queue
+             - adds the link object to the brokenlinks if the status code is not 200
+        """
+        if self.__jobq.qsize( ) % 10 == 0:
+            self.print_out("   ** %d ** " % ( self.__jobq.qsize( ), ) )
         self.count += 1
 
         url = l.get_url( )
         burl = url
 
+        # if not absolute url
         if re.match( "^(http|ftp)", url ) is None:
+            # tries to resolve the relative url
             url = LinkChecker.resolve_relative_link( url, self.base_url )
             l[ "full_url" ] = url
 
+        # if already visited
         if self.__is_visited( url ):
             self.print_out( "<><> already visited %s" % ( url, ) )
             return
@@ -150,12 +173,15 @@ class LinkChecker( ):
             self.print_out( "<><> skipping %s" % ( burl, ) )
             return
 
+        # marks this url as visited
         self.__add_visited( url )
 
         try:
+            # if the page must be parsed as well
             if l[ 'level' ] < self.recursive_depth and self.__is_from_same_domain( url ) and \
                 re.match( ".*\.(""png|jpg|pdf|gif|xml)$", url,re.I ) is None:
                 self.__check_subpage( url, l[ 'level' ] + 1 )
+            # actual check
             answer = requests.get( url )
 
             if answer.status_code == 200:
@@ -174,11 +200,19 @@ class LinkChecker( ):
 
 
     def __is_from_same_domain( self, url ):
+        """
+            returns true if the url is from the same domain as the "base link"
+        """
         return url.startswith( self.base_url ) or url.replace( "://www.", "://" ).startswith(
             self.base_url )
 
 
     def __check_subpage( self, link, level ):
+        """
+            creates a new parser and adds the links found in the page to the queue
+            Note that we must use a new parser, to avoid concurrency between threads
+            (this method can indeed be called by the workers)
+        """
         self.print_out( "###### checking subpage : %s at level %d " % ( link, level ) )
         parser = LinkChecker.__Parser( )
         links = parser.feedwith( link, level )
@@ -187,18 +221,34 @@ class LinkChecker( ):
                 self.__jobq.put( l )
 
     def getdir( self ):
+        """
+            returns the base directory of the "base url", for example:
+               base url : http://example.com/dir1/hello => http://example.com/dir1/
+            The last slash is included, as well as the protocol
+        """
         return self.base_url[ :self.base_url.rindex( "/" ) + 1 ]
 
     def getdomain( self ):
+        """
+            returns the domain of the base url, as well as the protocol used, for example:
+              base url : http://example.com/dir1/hello => http://example.com
+            The last slash is NOT included
+        """
         return re.search( "(^.+//[^/]+)", self.base_url ).group( 1 )
 
 
     def dump_broken_links( self ):
+        """
+            dumps to standard output all the broken links found in a readable format
+        """
         for link in self.brokenlinks:
             link.dump( )
 
 
     def brokenlinks_to_json( self ):
+        """
+            returns a string in json format encoding all the broken links
+        """
         obj = [ ]
         for l in self.brokenlinks:
             obj.append( l.as_obj( ) )
@@ -206,6 +256,12 @@ class LinkChecker( ):
 
 
     def print_out(self, msg):
+        """
+            depending on the options, adds the msg to the queue,
+            calls a foreign function or print to stdout.
+            (see the check method parameters for more infos)
+            This method is thread-safe.
+        """
         if self.__print_queue is not None:
             self.__print_queue.put(msg)
             return
@@ -220,6 +276,12 @@ class LinkChecker( ):
 
     @staticmethod
     def resolve_relative_link( url, base_url ):
+        """
+            transforms a relative link to an absolute one.
+            @params:
+              url : the url to transform
+              base_url : the full and absolute url where the relative link was found
+        """
         # the root domain
         try:
             base = re.search( "(^.+//[^/]+)", base_url ).group( 1 )
@@ -266,6 +328,9 @@ class LinkChecker( ):
 
 
     class __Parser( HTMLParser ):
+        """
+            The parser.
+        """
         def __init__( self ):
             HTMLParser.__init__( self )
 
@@ -288,6 +353,13 @@ class LinkChecker( ):
         # in a dictionary format, with keys : 'tag' + all the attributes found ...
         #@param the absolute url to fetch
         def feedwith( self, url, level = 0 ):
+            """
+                parses a page, creates a LinkDict object for each href or src found and returns a
+                 list of LinkDict.
+                 @params :
+                    level: the level of the base link (just an attribute added to the LinkDicts
+                    objects to keep track of the pages when recursion is enabled)
+            """
             self.links = [ ]
             self.base_url = url
             self.level = level

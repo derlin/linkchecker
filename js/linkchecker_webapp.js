@@ -3,12 +3,14 @@ var current_url = null;
 var checking_dialog = null;
 var checking_dialog_inner = null;
 
+var nbr_of_searches = 0;
+
 var MessageTypes = {
     // responses from the server
     IN_CHECKING_STREAM: "checking_stream",
     IN_BROKEN_LINKS: "broken_links",
     IN_CHECKING_CANCELED: "checking_canceled",
-
+    IN_ALREADY_CHECKING: "already_checking",
     // requests from the client
     OUT_CHECK: "check",
     OUT_CANCEL_CHECK: "cancel_check"
@@ -24,25 +26,32 @@ var MessageTypes = {
     // ----------- websocket handling -------------
     var server = new SimpleSocketHandler('ws://localhost:14000/ws');
     server.bind( MessageTypes.IN_CHECKING_STREAM, function( data ){
-        $( checking_dialog_inner ).append( data );
-        $( checking_dialog ).scrollTo( 'max' );
+        append_to_console( data );
     });
 
     server.bind( MessageTypes.IN_BROKEN_LINKS, function( result ){
         loading = false;
         $("#waiting").hide();
-        $( checking_dialog_inner ).append(
+        append_to_console(
             $("<br /><div><strong>Finished !</strong> Found " + result.length + " suspicious links...</div>")
         );
         $( checking_dialog ).scrollTo( 'max' );
         console.log( result );
         handle_result( result );
+        nbr_of_searches += 1;
     });
 
     server.bind( MessageTypes.IN_CHECKING_CANCELED, function( data ){
         console.log( data );
         loading = false;
         $( "#waiting" ).hide();
+    });
+
+    server.bind( MessageTypes.IN_ALREADY_CHECKING, function( data ){
+        loading = false;
+        $( "#waiting" ).hide();
+        append_to_console( $('<span>Oops,<br />It seems like you have already launched a process from another window.<br />' +
+            'Please, close the other one or wait until the job is finished and try again !</span>') );
     });
 
     //--------------- init interface -----------------------
@@ -70,7 +79,7 @@ var MessageTypes = {
     checking_dialog_inner = $( checking_dialog ).find(".inner");
 
     // init clear and show console buttons
-    $( "#clear-container button" ).button();
+    $( "#buttons-container button" ).button();
 
     $('#clear-button').click( function(){
         console.log("clear");
@@ -79,6 +88,7 @@ var MessageTypes = {
     $('#show-console-button').click( function(){
         open_checking_dialog()
     });
+
 
     // handles the input field
     $('#url_textfield').keypress( function( event ) {
@@ -94,7 +104,13 @@ var MessageTypes = {
             loading = true;
             current_url = $( this ).val();
 
-            server.send( MessageTypes.OUT_CHECK, current_url );
+            server.send(
+                MessageTypes.OUT_CHECK,
+                JSON.stringify({
+                    url: current_url,
+                    rec_depth: parseInt($('#rec_select' ).val())
+                })
+            );
 
             // opens the dialog
             open_checking_dialog();
@@ -125,8 +141,8 @@ function handle_result( data ){
         alink.append( $('<div class="entry url"><div class="key">url</div><div class="value">' + data[i]['url'] + '</div></div>') )
              .append( $('<div class="entry code"><div class="key">code</div><div class="value">' + data[i]['code'] + '</div></div>') )
              .append( $('<div class="entry lineno"><div class="key">line, col</div><div class="value">' + data[i]['lineno'] + '</div></div>') )
-             .append( $('<div class="link-details"><button class="ui-corner-all" onclick="show_details(' + i + ')">details</button></div>') )
-        var attrs = $('<div class="dialog ui-corner-all" index="' + i + '" title="Details"></div>');
+             .append( $('<div class="link-details"><button class="ui-corner-all" onclick="show_details(\'' + (nbr_of_searches + "_" + i) + '\')">details</button></div>') )
+        var attrs = $('<div class="dialog ui-corner-all" id="' + (nbr_of_searches + "_" + i) + '" title="Details"></div>');
         for( var key in data[i]['attrs'] ){
             attrs.append( $('<div class="entry"><div class="key">' + key + '</div><div class="value">' + data[i]['attrs'][key] + '</div></div>') );
         }
@@ -135,14 +151,17 @@ function handle_result( data ){
         $('#results button').button();
     }
     
-    
 }
 
-function show_details( i ){
-    $('.dialog[index=' + i + ']').dialog( { width: 400 } );
+function show_details( id ){
+    $('#' + id ).dialog( { width: 400 } );
 }
 
 function is_url_valid( url ){
     return /^(http|https|ftp):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i.test( url );
 }
 
+function append_to_console( msg ){
+    $( checking_dialog_inner ).append( msg );
+    $( checking_dialog ).scrollTo( 'max' );
+}
