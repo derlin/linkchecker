@@ -5,7 +5,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 import cherrypy
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from resources.linkchecker_socket_handler import *
-from resources.linkchecker  import *
+
 
 WebSocketPlugin( cherrypy.engine ).subscribe( )
 cherrypy.tools.websocket = WebSocketTool( )

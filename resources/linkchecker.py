@@ -31,13 +31,16 @@ class LinkChecker( ):
         if url is not None: self.feedwith( url )
 
 
-    ## feeds the checker with a new url
-    #@brief 
-    # this method triggers the parsing of the page indicated by the <param>url</param link.
-    # Afterwards, all the links found in the page are available through self.links. Each link is
-    # in a dictionary format, with keys : 'tag' + all the attributes found ... 
-    #@param the absolute url to fetch
+
     def feedwith( self, url ):
+        """
+            feeds the checker with a new url
+            this method triggers the parsing of the page indicated by the <param>url</param link.
+            Afterwards, all the links found in the page are available through self.links. Each link is
+            in a dictionary format, with keys : 'tag' + all the attributes found ...
+            @param
+              url : the absolute url of the page to parse
+        """
         self.base_url = url
         self.count = 0
         self.root_url = self.getdomain( )
@@ -47,38 +50,71 @@ class LinkChecker( ):
         return self.__links
 
 
-    def check_async( self, print_function = None, print_queue= None, recursive_depth = 2,
+    def check_async( self, print_function = None, print_queue= None, recursive_depth = 0,
             callback=None ):
+        """
+            launches the checking process of all the links found in the page fed with,
+            asynchronously.
+            afterwards, all the broken links found will be available in the self.broken_links variable.
+            Note that this method MUST be called after feedwith.
+            @params:
+                print_function: the function to call for output (must take one string argument).
+                    Makes sense only if the verbose variable is set to True.
+                print_queue: the output strings will be added to this queue instead of being
+                    printed (to stdout or through the print_function given)
+                    Makes sense only if the verbose variable is set to True.
+                recursive_depth: if more than 0 (the default), the pages from
+                    the same directory of the base url found during the checking process will be
+                    parsed as well.
+                    Careful : if the domain is too large, the risk is great that the checking
+                        will be endless. Don't try a recursive_depth of 1 with stackoverflow !!
 
+        """
         def launch():
             self.check(print_function, print_queue, recursive_depth)
+            self.checking = False
             if callback is not None: callback()
 
         Thread(target=launch).start()
 
     def stop_checking(self):
-        self.checking = False
+        """
+            stops the checking process, if it is running
+        """
         while not self.__jobq.empty():
             pass
 
-    ### triggers the check of all the links found in the page.
-    #@brief 
-    # this method must be called after having fed the checker with a new url.
-    # afterwards, all the broken links found will be available in the self.broken_links variable.
-    #@param verbose
-    #   True by default. If the method comments its actions
     def check( self, print_function = None, print_queue= None, recursive_depth = 2 ):
+        """
+            launches the checking process of all the links found in the page fed with,
+            asynchronously.
+            afterwards, all the broken links found will be available in the self.broken_links variable.
+            Note that this method MUST be called after feedwith.
+            @params:
+                print_function: the function to call for output (must take one string argument).
+                    Makes sense only if the verbose variable is set to True.
+                print_queue: the output strings will be added to this queue instead of being
+                    printed (to stdout or through the print_function given)
+                    Makes sense only if the verbose variable is set to True.
+                recursive_depth: if more than 0 (the default), the pages from
+                    the same directory of the base url found during the checking process will be
+                    parsed as well.
+                    Careful : if the domain is too large, the risk is great that the checking
+                        will be endless. Don't try a recursive_depth of 1 with stackoverflow !!
+
+        """
         if not hasattr( self, 'base_url' ):
             raise Exception( 'cannot call check before feeding the checker' )
 
         self.checking = True
+        # handles the parameters
         self.__print_queue = print_queue
         self.__print_function = None
         if hasattr(print_function, '__call__'):
             print "fun set "
             self.__print_function = print_function
-
         self.recursive_depth = recursive_depth
+
         # if they don't already exist, creates and starts the worker threads
         if not hasattr( self, 'workers' ):
             self.__resultq = Queue( )
@@ -91,19 +127,24 @@ class LinkChecker( ):
                 w.daemon = True
                 w.start( )
 
+        # puts the jobs in the queue
         for l in self.__links:
             self.__jobq.put( l )
 
         self.__links = None # frees some memory
 
+        # waits until all tasks are done
         while self.__jobq.qsize( ) > 0:
-            time.sleep(1)       # block until all tasks are done
+            time.sleep(1)
 
         if self.verbose:
             print "number of deadlinks in this page : ", self.__resultq.qsize( )
 
+        # transfers the results into the brokenlinks variable
         while not self.__resultq.empty( ):
             self.brokenlinks.append( self.__resultq.get( ) )
+
+        self.checking = False
 
 
     def __worker( self ):
@@ -145,7 +186,6 @@ class LinkChecker( ):
     def __parse_link( self, l ):
         """
             The actual job done by the workers:
-             - resolves the url if it is not an absolute one
              - verifies that the url has not been already visited
              - if the recursive depth is greated than 0 and the url is from the same
                domain as the "base url", parses the page and adds the links found to the queue
@@ -155,22 +195,16 @@ class LinkChecker( ):
             self.print_out("   ** %d ** " % ( self.__jobq.qsize( ), ) )
         self.count += 1
 
-        url = l.get_url( )
-        burl = url
-
-        # if not absolute url
-        if re.match( "^(http|ftp)", url ) is None:
-            # tries to resolve the relative url
-            url = LinkChecker.resolve_relative_link( url, self.base_url )
-            l[ "full_url" ] = url
+        url = l.get_absolute_url()
 
         # if already visited
         if self.__is_visited( url ):
             self.print_out( "<><> already visited %s" % ( url, ) )
             return
 
+        # if the url could not be resolved or is not valid
         if url is None:
-            self.print_out( "<><> skipping %s" % ( burl, ) )
+            self.print_out( "<><> skipping %s" % ( url, ) )
             return
 
         # marks this url as visited
@@ -191,10 +225,11 @@ class LinkChecker( ):
             l[ "code" ] = answer.status_code
             return l
         except requests.exceptions.MissingSchema:
-            self.print_out( "***** invalid : %s <-> %s " % ( burl, url ) )
+            self.print_out( "***** invalid : %s <-> %s " % ( l.get_url(), url ) )
 
         except requests.exceptions.RequestException, e:
-            self.print_out( "#### unknown error (%s) : %s <-> %s" % ( e.message, burl, url )  )
+            self.print_out( "#### unknown error (%s) : %s <-> %s" %
+                            ( e.message, l.get_url(), url )  )
 
         return None
 
@@ -237,13 +272,16 @@ class LinkChecker( ):
         return re.search( "(^.+//[^/]+)", self.base_url ).group( 1 )
 
 
-    def dump_broken_links( self ):
+    def brokenlinks_to_string( self, newline=None ):
         """
-            dumps to standard output all the broken links found in a readable format
+            returns a string made of all the broken links found in a readable format
+            @param:
+                newline : the line ending to use.
+                    If none, the default system line endings will be used
         """
-        for link in self.brokenlinks:
-            link.dump( )
-
+        output = ""
+        for link in self.brokenlinks: output =+ link.to_string( )
+        return output
 
     def brokenlinks_to_json( self ):
         """
@@ -331,12 +369,13 @@ class LinkChecker( ):
         """
             The parser.
         """
+
         def __init__( self ):
             HTMLParser.__init__( self )
 
 
         #override
-        def handle_starttag(self, tag, attrs):
+        def handle_starttag( self, tag, attrs ):
             attrs = dict( attrs )
 
             if 'src' in attrs.keys( ) or 'href' in attrs.keys( ):
@@ -344,6 +383,13 @@ class LinkChecker( ):
                                'level': self.level,
                                'page' : self.base_url } )
                 l.update( attrs )
+
+                # if not absolute url (must be done here in order to have the proper base_url)
+                if re.match( "^(http|ftp)", l.get_url() ) is None:
+                    # tries to resolve the relative url
+                    l[ "full_url" ] = LinkChecker.resolve_relative_link( l.get_url(),
+                        self.base_url )
+
                 self.links.append( l )
 
         ## feeds the checker with a new url

@@ -1,19 +1,41 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import httplib
+import os
 
 __author__ = 'lucy'
 
 class LinkDict( dict ):
+    """
+        This class holds a dictionary with infos related to links.
+        It is made to be used in conjonction with the LinkChecker module.
+        required keys : [href|src], tag, code, lineno
+        optional keys : full_url, level, page, and all the possible attributes of a html tag
+    """
 
     def get_url( self ):
+        """
+            returns the url as it was referenced in the tag
+        """
         return self.has_key( "href" ) and self[ "href" ] or self[ "src" ]
 
+    def get_absolute_url( self ):
+        """
+            returns the absolute url
+        """
+        return self.has_key( "full_url" ) and self[ "full_url" ] or self.get_url()
+
     def get_status_code( self ):
+        """
+            returns the http status code
+        """
         if not self.has_key( 'code' ): return None
         return "%s (%s)" % (self[ "code" ], httplib.responses[ self[ "code" ] ] )
 
     def attr_keys( self ):
+        """
+            returns the keys to the attributes, i.e. everything which is not of first importance
+        """
         attrs = [ ]
         for key in sorted( self ):
             if not key in [ 'code', 'href', 'src', 'lineno' ]:
@@ -22,24 +44,40 @@ class LinkDict( dict ):
         return attrs
 
     def is_broken( self ):
+        """
+            returns true if the link is suspicious, false otherwise
+            (i.e. checks for a status code attribute)
+        """
         return self.has_attr( "code" )
 
-    def dump( self ):
-        print " { "
+    def to_string( self, newline=None ):
+        """
+            returns the dictionary as string.
+            @param:
+                newline : the line ending to use.
+                    If none, the default system line endings will be used
+        """
+        if newline is None: newline = os.linesep
+        str = " {" + newline
 
         for key in self.keys( ):
             if key == "code":
-                print "   %-11s => %s" % (  key, self.get_status_code( ) )
+                str += "   %-11s => %s%s" % (  key, self.get_status_code( ), newline )
 
             elif key in [ 'src', 'href' ]:
-                print "   %-11s => %s" % ( ( "%s (%s)" % ('url', key) ), self[ key ] )
+                str += "   %-11s => %s%s" % ( ( "%s (%s)" % ('url', key) ), self[ key ], newline )
 
             else:
-                print "   %-11s => %s" % ( key, self[ key ] ) #.encode('utf8')
+                str += "   %-11s => %s%s" % ( key, self[ key ], newline ) #.encode('utf8')
 
-        print " }"
+        str += " }"
 
-    def dump_for_html( self ):
+        return str
+
+    def to_html( self ):
+        """
+            returns a html version of the dictionary
+        """
         output = ""
         output += "<div class='link_dump'>"
 
@@ -59,12 +97,19 @@ class LinkDict( dict ):
         return output
 
     def as_obj( self ):
-        l = {'code': self.get_status_code( ), 'url': self.get_url( )}
-        print "type ", type( self[ 'lineno' ] )
-        l[ 'lineno' ] = "%d, %d" % ( self[ 'lineno' ] )
-        l[ 'attrs' ] = {}
+        """
+           converts the dictionary to an object :
+           self.code   => the status code
+           self.url    => the url
+           self.lineno => the line number
+           self.attrs  => all the other stuff, in a dict
+        """
+        l = {
+            'code': self.get_status_code( ),
+            'url': self.get_url( ),
+            'lineno': "%d, %d" % ( self[ 'lineno' ] ),
+            'attrs': {}
+        }
 
-        for key in self.attr_keys( ):
-            print key, self[ key ]
-            l[ 'attrs' ][ key ] = self[ key ]
+        for key in self.attr_keys( ): l[ 'attrs' ][ key ] = self[ key ]
         return l
