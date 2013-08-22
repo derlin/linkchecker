@@ -21,9 +21,11 @@ class LinkDict( dict ):
 
     def get_absolute_url( self ):
         """
-            returns the absolute url
+            returns the absolute url.
+            In case of anchors or js functions for example, the absolute url may be None.
         """
-        return self.has_key( "full_url" ) and self[ "full_url" ] or self.get_url()
+        if self.has_key( "full_url" ): return self[ "full_url" ]
+        return self.get_url()
 
     def get_status_code( self ):
         """

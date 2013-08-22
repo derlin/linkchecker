@@ -1,4 +1,4 @@
-var loading = false;
+var loading = false, connected = false;
 var current_url = null;
 var checking_dialog = null;
 var checking_dialog_inner = null;
@@ -25,6 +25,7 @@ var MessageTypes = {
 
     // ----------- websocket handling -------------
     var server = new SimpleSocketHandler('ws://localhost:14000/ws');
+    connected = true;
     server.bind( MessageTypes.IN_CHECKING_STREAM, function( data ){
         append_to_console( data );
     });
@@ -33,7 +34,8 @@ var MessageTypes = {
         loading = false;
         $("#waiting").hide();
         append_to_console(
-            $("<br /><div><strong>Finished !</strong> Found " + result.length + " suspicious links...</div>")
+            $("<br /><div><strong>Finished !</strong> Found " + result['brokenlinks'].length +
+                " suspicious links out of " + result['nbr_visited'] + " ...</div>")
         );
         $( checking_dialog ).scrollTo( 'max' );
         console.log( result );
@@ -45,6 +47,7 @@ var MessageTypes = {
         console.log( data );
         loading = false;
         $( "#waiting" ).hide();
+        append_to_console( $('<div><strong>Checking canceled</strong></div>') );
     });
 
     server.bind( MessageTypes.IN_ALREADY_CHECKING, function( data ){
@@ -52,6 +55,18 @@ var MessageTypes = {
         $( "#waiting" ).hide();
         append_to_console( $('<span>Oops,<br />It seems like you have already launched a process from another window.<br />' +
             'Please, close the other one or wait until the job is finished and try again !</span>') );
+    });
+
+    server.bind( 'close', function( data ){
+        loading = false;
+        $( "#waiting" ).hide();
+        connected = false;
+        $("#validation .text" ).text("Socket closed" );
+        $("#validation").css("display", "inline-block");
+        var msg = $('<span>Oops,<br />It seems like the socket has been closed !<br />' +
+            'You can maybe try to refresh the page ?</span>');
+        append_to_console( msg );
+        $("#results" ).append( msg );
     });
 
     //--------------- init interface -----------------------
@@ -93,7 +108,7 @@ var MessageTypes = {
     // handles the input field
     $('#url_textfield').keypress( function( event ) {
         
-        if ( event.which != 13 || loading ) return;
+        if ( event.which != 13 || loading || !connected ) return;
           
         if( is_url_valid( $( this ).val() )){
             
@@ -131,8 +146,9 @@ var MessageTypes = {
         $( checking_dialog ).dialog( 'open' );
     }
 }
-function handle_result( data ){
-    
+function handle_result( result ){
+    var nbr_visited = result['result.nbr_visited'];
+    var data = result['brokenlinks'];
     $('#results').append( $('<div class="intro">We found <strong>' + data.length + '</strong> suspicious link ' + ( data.length > 1 ? 's' : '' ) + 
         ' on page:<br />' + current_url + '</div>') );
         

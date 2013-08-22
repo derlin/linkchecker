@@ -32,7 +32,7 @@ class LinkCheckerWebApp( object ):
 
     @cherrypy.expose
     def index( self ):
-        output = open('html/linkchecker_webapp.html').read()
+        output = open( 'html/linkchecker_webapp.html' ).read()
         print current_dir
         #~ htmlTemplate = Template( file='templates/index.tmpl' )
         #~ htmlTemplate.css_scripts=['static/css/main.css']

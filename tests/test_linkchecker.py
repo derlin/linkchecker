@@ -4,7 +4,10 @@ from resources.linkchecker import *
 
 parser = LinkChecker()
 #parser.feedwith("http://perrin-traiteur.ch")
-
+links = parser.feedwith( "http://search.cpan.org/~rbow/Date-ICal-2.678/lib/Date/ICal.pm" )#"http://perrin-traiteur.ch")
+print "found ", len( links ), " links"
+parser.check()
+exit()
 
 class Test:
 
@@ -46,7 +49,7 @@ exit()
 def fun():
     print "finish"
 
-links = parser.feedwith( "http://docs.python-requests.org/" )#"http://perrin-traiteur.ch")
+links = parser.feedwith( "http://search.cpan.org/~rbow/Date-ICal-2.678/lib/Date/ICal.pm" )#"http://perrin-traiteur.ch")
 print "found ", len( links ), " links"
 parser.check_async(recursive_depth=0,callback=fun)
 
