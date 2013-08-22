@@ -1,4 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 __author__ = 'lucy'
+## date : august 2013
 
 from ws4py.websocket import WebSocket
 from resources.linkchecker import *

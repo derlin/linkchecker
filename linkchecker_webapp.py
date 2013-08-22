@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+__author__ = 'lucy'
+## date : august 2013
+
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -44,7 +48,7 @@ class LinkCheckerWebApp( object ):
 cherrypy.quickstart( LinkCheckerWebApp(), config = {
 
     'global' : {
-        'server.socket_host': "127.0.0.1",
+        'server.socket_host': "192.168.0.23",
         'server.socket_port': 14000,
         'tools.staticfile.root': "/home/lucy/git/linkchecker",
         'tools.sessions.on': True,

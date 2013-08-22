@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+__author__ = 'lucy'
+## date : august 2013
+
 import httplib
 import os
 

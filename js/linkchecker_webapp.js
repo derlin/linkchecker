@@ -24,7 +24,7 @@ var MessageTypes = {
  $( function(){
 
     // ----------- websocket handling -------------
-    var server = new SimpleSocketHandler('ws://localhost:14000/ws');
+    var server = new SimpleSocketHandler('ws://192.168.0.23:14000/ws');
     connected = true;
     server.bind( MessageTypes.IN_CHECKING_STREAM, function( data ){
         append_to_console( data );
