@@ -14,15 +14,21 @@ It marked the end of my second year of computer awareness.
 ## Install ##
 
 - be sure you use Python 2 (I developed with python 2.7.6).
-- clone the repository
+- clone the repository.
 - navigate inside the root directory and type: 
 
 ```
 #!bash
-sudo python setup.py --record-files install
+sudo python setup.py install --record files.txt
 
 ```
+## Uninstall ##
+To uninstall it, simply type:
+```
+#!bash
+sudo python setup.py install --record files.txt
 
+```
 ## run ##
 1) launch the server:
 ```
@@ -33,4 +39,3 @@ python linkchecker_webapp.py
 2) open your web browser and type the address: localhost:1400
 
 3) enter a link and press enter.
-
