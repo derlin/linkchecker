@@ -1,9 +1,11 @@
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name = 'linkchecker',
     version = '1.0',
     packages = [ 'resources' ],
+    install_requires = [ 'cherrypy', 'ws4py', 'cherrypy-wsgiserver' ],
     url = '',
     license = '',
     author = 'lucy',
