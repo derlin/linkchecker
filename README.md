@@ -19,7 +19,7 @@ It marked the end of my second year of computer awareness.
 
 ```
 #!bash
-sudo python setup.py install --record files.txt
+cat files.txt | sudo xargs rm -rf
 
 ```
 ## Uninstall ##
