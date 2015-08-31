@@ -5,7 +5,13 @@ setup(
     name = 'linkchecker',
     version = '1.0',
     packages = [ 'resources' ],
-    install_requires = [ 'cherrypy', 'ws4py', 'cherrypy-wsgiserver' ],
+    install_requires = [ 
+        'requests', 
+#        'json',
+        'CherryPy', 
+        'ws4py', 
+        'cherrypy-wsgiserver' 
+        ],
     url = '',
     license = '',
     author = 'lucy',
