@@ -1,6 +1,8 @@
 # README #
 
-## Quick summary ##
+A simple webapp written in Python to check dead links from a public url. The dead links are listed and documented so that you can easily fix them afterwards. 
+
+## Context ##
 
 This small project was a way to experience with the websocket features of html5 using Python and javascript (jquery).
 
